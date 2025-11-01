@@ -1,0 +1,116 @@
+from flask import Flask, request, render_template_string, redirect, url_for
+
+app = Flask(__name__)
+
+INDEX_HTML = """
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Minta Maaf ke Kamu</title>
+  <style>
+    :root{ --bg:#fff; --text:#111; --accent:#111; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#f8f8f8);color:var(--text)}
+    .card{width:clamp(300px,70vw,420px);background:rgba(255,255,255,0.9);border-radius:16px;padding:28px;box-shadow:0 6px 20px rgba(12,12,12,0.08);text-align:center}
+    h1{margin:0 0 12px;font-size:28px}
+    p{margin:0 0 18px;color:#444}
+    .input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #ddd;font-size:16px;box-sizing:border-box}
+    .btn{display:inline-block;margin-top:12px;padding:10px 18px;border-radius:999px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+    .small{font-size:12px;color:#777;margin-top:10px}
+    footer{margin-top:18px;font-size:13px;color:#666}
+    a.credits{color:#0a66ff;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Hai kamu</h1>
+    <p>Boleh aku tau nama panggilan manis kamu?</p>
+
+    <form action="{{ url_for('show') }}" method="post" id="nameForm" autocomplete="off">
+      <input name="nickname" id="nickname" class="input" placeholder="Masukkan nama (contoh: Adin)" required maxlength="40" />
+      <div>
+        <button class="btn" type="submit">Lanjut</button>
+      </div>
+    </form>
+
+    <footer>
+      Made by <a class="credits" href="https://www.tiktok.com/@alenn.engineer.stress" target="_blank" rel="noopener">TikTok: @alenn.engineer.stress</a>
+    </footer>
+  </div>
+</body>
+</html>
+"""
+
+APOLOGY_HTML = """
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aku minta maaf</title>
+  <style>
+    :root{ --bg:#fff; --text:#111; --accent:#111; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#f3f3f3);color:var(--text)}
+    .card{width:clamp(300px,70vw,420px);background:rgba(255,255,255,0.95);border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(12,12,12,0.06);text-align:center}
+    h1{margin:0 0 12px;font-size:28px}
+    p{margin:0 0 18px;color:#444;line-height:1.5}
+    .btn{display:inline-block;margin:8px 8px 0;padding:10px 18px;border-radius:999px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#eee;color:#111;border:1px solid #ddd}
+    footer{margin-top:18px;font-size:13px;color:#666}
+    a.credits{color:#0a66ff;text-decoration:none}
+  </style>
+  <script>
+    function respond(ans) {
+      const result = document.getElementById('result');
+      if (ans === 'ya') {
+        result.textContent = "Terima kasih, " + "{{ nickname_js }}" + " 💖. Aku janji jadi lebih baik.";
+      } else {
+        result.textContent = "Aku ngerti. Maaf ya. Aku akan beri kamu ruang.";
+      }
+      // disable buttons after click
+      document.getElementById('yesBtn').disabled = true;
+      document.getElementById('noBtn').disabled = true;
+    }
+  </script>
+</head>
+<body>
+  <div class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Aku minta maaf</h1>
+    <p>Aku beneran gak bermaksud bikin kamu kesel, <strong>{{ nickname_html }}</strong>.</p>
+
+    <div>
+      <button id="yesBtn" class="btn" onclick="respond('ya')">Maafin ✔️</button>
+      <button id="noBtn" class="btn secondary" onclick="respond('tidak')">Enggak ❌</button>
+    </div>
+
+    <p id="result" style="margin-top:16px;color:#333;font-weight:600"></p>
+
+    <footer>
+      Made by <a class="credits" href="https://www.tiktok.com/@alenn.engineer.stress" target="_blank" rel="noopener">TikTok: @alenn.engineer.stress</a>
+    </footer>
+  </div>
+</body>
+</html>
+"""
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template_string(INDEX_HTML)
+
+@app.route("/show", methods=["POST"])
+def show():
+    name = request.form.get("nickname", "").strip()
+    if not name:
+        return redirect(url_for("index"))
+    # safe rendering for HTML and JS contexts
+    from markupsafe import escape
+    name_html = escape(name)
+    # for JS insertion, escape quotes and backslashes
+    name_js = str(name).replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
+    return render_template_string(APOLOGY_HTML, nickname_html=name_html, nickname_js=name_js)
+
+if __name__ == "__main__":
+    # Allow external access by binding to all network interfaces
+    app.run(host='0.0.0.0', port=5000, debug=False)
+
